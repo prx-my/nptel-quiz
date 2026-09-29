@@ -1,0 +1,42 @@
+{
+  "name": "nptel-quiz",
+  "version": "1.0.0",
+  "description": "OCR + auto-answer pipeline for NPTEL image-based quizzes (macOS). Uses on-device Apple Vision OCR and a pluggable answer engine.",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "bin": {
+    "nptel-quiz": "bin/nptel-quiz.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "native",
+    "scripts",
+    "skill",
+    "install.sh",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/build-ocr.js",
+    "build:ocr": "node scripts/build-ocr.js",
+    "test": "node test/select.test.js"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin"
+  ],
+  "keywords": [
+    "nptel",
+    "quiz",
+    "ocr",
+    "vision",
+    "playwright",
+    "automation"
+  ],
+  "license": "MIT"
+}

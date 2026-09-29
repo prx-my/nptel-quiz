@@ -1,0 +1,7 @@
+node_modules/
+bin/ocr
+.DS_Store
+*.log
+playwright-report/
+test-results/
+tmp/
