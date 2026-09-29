@@ -2,6 +2,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const nq = require('../src');
 const { DEFAULT_COURSE_URL } = require('../src/browser');
@@ -17,6 +18,8 @@ Usage:
   nptel-quiz submit  --url <quizUrl> --answers "a,b,c" [--dry-run] [--headless]
   nptel-quiz run     --url <quizUrl> [--provider gemini|opencode] [--model <m>]
                      [--answers "a,b,c"] [--dry-run] [--headless]
+  nptel-quiz install-skill [--global] [--dir <path>]
+                     Install the agent skill (Antigravity / opencode / any agent).
 
 Options:
   --url <quizUrl>     Quiz page URL, e.g.
@@ -194,6 +197,34 @@ async function cmdRun(opts) {
   });
 }
 
+function cmdInstallSkill(opts) {
+  const src = path.join(__dirname, '..', 'skill', 'nptel-quiz', 'SKILL.md');
+  if (!fs.existsSync(src)) throw new Error(`Skill source missing: ${src}`);
+
+  let targetDir;
+  let scope;
+  if (opts.dir) {
+    targetDir = path.resolve(opts.dir);
+    scope = 'custom directory';
+  } else if (opts.global) {
+    targetDir = path.join(os.homedir(), '.gemini', 'config', 'skills', 'nptel-quiz');
+    scope = 'global (all Antigravity workspaces)';
+  } else {
+    targetDir = path.join(process.cwd(), '.agents', 'skills', 'nptel-quiz');
+    scope = 'workspace';
+  }
+
+  fs.mkdirSync(targetDir, { recursive: true });
+  const dest = path.join(targetDir, 'SKILL.md');
+  fs.copyFileSync(src, dest);
+
+  process.stdout.write(`Installed skill (${scope}).\n  ${dest}\n`);
+  process.stdout.write(
+    '\nIn Antigravity: open the Customizations panel (or type /skills) to confirm,\n' +
+      'then just paste a quiz URL and ask the agent to solve it.\n'
+  );
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.version) {
@@ -214,6 +245,8 @@ async function main() {
       return cmdSubmit(opts);
     case 'run':
       return cmdRun(opts);
+    case 'install-skill':
+      return cmdInstallSkill(opts);
     default:
       process.stderr.write(`Unknown command "${cmd}"\n${HELP}`);
       process.exit(2);

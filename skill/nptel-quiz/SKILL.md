@@ -1,53 +1,56 @@
 ---
 name: nptel-quiz
-description: Solve NPTEL image-based quizzes (MCQ/MSQ) end to end. Use when the user shares an NPTEL quiz/assignment URL whose questions are images, or asks to auto-answer/submit a quiz. Uses on-device OCR plus this agent's own reasoning (no external API), then submits.
+description: Solve NPTEL image-based quizzes (MCQ/MSQ) end to end. Use when the user shares an NPTEL quiz URL (unitId + assessmentId) whose questions are images, or asks to auto-answer/submit an NPTEL quiz or assignment. OCRs the questions with the local `nptel-quiz` CLI, lets the agent's own model choose the answers (no API key), then submits.
 ---
 
-# NPTEL quiz solver (agent flow)
+# NPTEL quiz solver
 
-NPTEL quizzes render each question as an image; the DOM exposes only `a. b. c. d.`
-labels and radio/checkbox inputs. This skill OCRs the images locally, lets the
-agent choose the answers, then selects and submits them.
+NPTEL quizzes render every question (and its options a./b./c./d.) as an image;
+the DOM exposes only `a. b. c. d.` labels and radio/checkbox inputs. This skill
+OCRs the images with the local `nptel-quiz` CLI, lets **the agent's own model**
+decide the answers, then selects and submits them. No Gemini API key is needed —
+the agent (Antigravity's Flash model, opencode, or any agent) does the reasoning.
 
 ## Prerequisites
 
 - `nptel-quiz` is installed and on PATH (`nptel-quiz --version`).
-- The user has run `nptel-quiz login` once (browser profile saved).
-- The user provides a quiz URL of the form:
+  Install: `curl -fsSL https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.sh | bash`
+- The user has run `nptel-quiz login` once (browser session saved).
+- A quiz URL of the form:
   `https://onlinecourses.nptel.ac.in/e-learning/course/<course>?unitId=<u>&assessmentId=<id>`
-  (quizzes use `assessmentId`; programming assignments use `progassignmentId`).
+  Quizzes use `assessmentId`; programming assignments use `progassignmentId`.
 
 ## Workflow
 
-1. OCR the quiz to text:
+1. **OCR the quiz to text** (run the command via your shell/`run_command` tool):
    ```
    nptel-quiz ocr --url "<quizUrl>" --json /tmp/nptel-quiz.json
    ```
-   This prints `[Q1] ... [Q2] ...` blocks (question + its a/b/c/d options).
+   Output is `[Q1] ... [Q2] ...` blocks; each block is one question plus its
+   `a. b. c. d.` options. If `/tmp` is unavailable, omit `--json`.
 
-2. **Answer each question yourself** from the OCR text. Rules:
-   - Output one letter per question for MCQ; for MSQ output every correct option.
-   - Read the options from the same block; never guess from the visible DOM
-     (it has no option text).
-   - Code-snippet questions may need a second look — if the OCR is ambiguous,
-     re-render just that image and read it again.
+2. **Answer each question yourself**, from the OCR text only:
+   - MCQ: one letter per question. MSQ: all correct letters.
+   - Never guess from the visible page — the DOM has no option text.
+   - For code-snippet questions, read carefully; if the OCR is ambiguous
+     (`()` rendered as `O`, wrapped lines), re-read that image before answering.
 
-3. Submit:
+3. **Submit**:
    ```
    nptel-quiz submit --url "<quizUrl>" --answers "b,a,b,a,c,d,b,a,b,a"
    ```
    - MCQ: comma-separated letters, one per question.
    - MSQ: join a question's options with `+`, e.g. `"a+c,b,d"`.
-   - Add `--dry-run` first to select without submitting when unsure.
+   - Use `--dry-run` first to select without submitting when unsure.
 
-4. Confirm the tool reports `Submitted: ...` and the page shows
+4. Confirm the command prints `Submitted: ...` and the page shows
    "Your answers are successfully submitted!".
 
-## Notes
+## Rules & gotchas
 
-- Verify the quiz title printed by `ocr` matches what the user expects — a wrong
+- Verify the quiz title printed by `ocr` matches the user's intent — a wrong
   `assessmentId` silently loads the last-viewed quiz.
-- If OCR misreads `()` as `O`, it does not affect answers.
-- Prefer `--dry-run` + a screenshot when confidence in an answer is low.
-- Do not use this to violate NPTEL's academic-integrity rules; it is for the
-  user's own enrolled courses.
+- Quizzes are graded; if an answer is uncertain, tell the user and use `--dry-run`.
+- OCR misreading `()` as `O` does not change the answer.
+- Do not use this to break NPTEL's academic-integrity rules; it is for the user's
+  own enrolled courses.

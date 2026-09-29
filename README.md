@@ -54,9 +54,9 @@ join a question's choices with `+`, e.g. `--answers "a+c,b,d"`.
 **Quizzes use `assessmentId`** — programming assignments use `progassignmentId`.
 A wrong param silently loads the last-viewed quiz, so always check the printed title.
 
-## Agent / opencode flow
+## Agent integration (Antigravity, opencode, …)
 
-When the loop runs inside an agent, skip the API entirely:
+If an agent is driving, skip the API key entirely — the agent's own model answers:
 
 ```bash
 nptel-quiz ocr --url "<quizUrl>" --json /tmp/quiz.json   # agent reads questions
@@ -64,7 +64,29 @@ nptel-quiz ocr --url "<quizUrl>" --json /tmp/quiz.json   # agent reads questions
 nptel-quiz submit --url "<quizUrl>" --answers "b,a,b,a,c,d,b,a,b,a"
 ```
 
-A ready-made skill lives in [`skill/nptel-quiz/SKILL.md`](skill/nptel-quiz/SKILL.md).
+### Google Antigravity
+
+Antigravity already ships Gemini Flash, so use it as the answer engine — no
+`GEMINI_API_KEY` needed. Install the skill (it follows the Agent Skills standard):
+
+```bash
+nptel-quiz install-skill            # workspace: ./.agents/skills/nptel-quiz/
+nptel-quiz install-skill --global   # all workspaces: ~/.gemini/config/skills/nptel-quiz/
+```
+
+Then in Antigravity, open the **Customizations** panel (or run `/skills`) to
+confirm `nptel-quiz` is listed, and paste a quiz URL + "solve this quiz". The
+agent will OCR via the CLI, answer with its Flash model, and submit.
+
+> Skill paths: workspace `./.agents/skills/<name>/SKILL.md`; global
+> `~/.gemini/config/skills/<name>/SKILL.md` (legacy `~/.gemini/antigravity/skills/`
+> also works). Rules live in `./.agents/rules/` or `~/.gemini/GEMINI.md`.
+
+### opencode / other agents
+
+Same flow. A ready-made skill lives in
+[`skill/nptel-quiz/SKILL.md`](skill/nptel-quiz/SKILL.md); copy it into your
+agent's skills directory (for opencode: `~/.config/opencode/skills/nptel-quiz/`).
 
 ## Library / SDK
 
