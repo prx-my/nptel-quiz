@@ -1,187 +1,169 @@
-# nptel-quiz
+# NPTEL Quiz Solver
 
-**OCR + auto-answer pipeline for NPTEL image quizzes (macOS).**
+NPTEL quizzes render each question as an image, so the page content can't be read
+the normal way. This tool pulls those images out of the page, OCRs them locally,
+passes the text to a model to choose the answers, and submits them.
 
-NPTEL quizzes render every question (and its options) as an image, leaving only
-`a. b. c. d.` and radio buttons in the DOM. `nptel-quiz` reads those images with
-**on-device Apple Vision OCR** (free, private, ~30 ms/question), then answers them
-with a pluggable engine:
+It runs on macOS and Windows. OCR happens on-device (Apple Vision on macOS,
+Windows.Media.Ocr on Windows), so the question images never leave your machine.
+In agent mode the answers come from an AI agent you already use; alternatively a
+Gemini API key lets it run on its own. Either way only short plain text is sent
+out, not images.
 
-- **opencode / agent mode** — the agent answers; no API key, no tokens.
-- **Gemini** — one batched API call per quiz with your own `GEMINI_API_KEY`.
+## Requirements
 
-## Install (one line)
+- Node.js 18 or newer.
+- macOS: Xcode Command Line Tools, for the Swift OCR build (`xcode-select --install`).
+- Windows: nothing extra; the OCR engine is part of Windows 10/11.
+- An NPTEL account enrolled in the course you're working on.
 
-**macOS**
+## Install
+
+macOS:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.sh | bash
 ```
 
-**Windows** (PowerShell)
+Windows (PowerShell):
+
 ```powershell
 powershell -ExecutionPolicy Bypass -c "iwr -useb https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.ps1 | iex"
 ```
 
-OCR is **on-device and per-OS — the two engines never collide**:
-
-| OS | OCR engine | Build needed |
-|---|---|---|
-| macOS | Apple **Vision** (`native/ocr.swift` → `bin/ocr`) | yes (`swiftc`, via Xcode CLT) |
-| Windows | **Windows.Media.Ocr** (`native/ocr.ps1`) | no — built into Windows 10/11 |
-
-The installer:
-
-1. checks macOS + Node.js (installs Node via Homebrew if needed),
-2. downloads the tool to `~/.nptel-quiz`,
-3. installs dependencies + Playwright's Chromium,
-4. compiles the native OCR binary with `swiftc`,
-5. links the `nptel-quiz` command onto your `PATH`.
-
-> macOS requires the **Xcode Command Line Tools** for `swiftc` (`xcode-select --install`).
-> Windows needs no OCR build — it uses the built-in `Windows.Media.Ocr` engine
-> (ensure a language with OCR support is installed, e.g. English).
-
-## Quick start
+Both installers put the tool in `~/.nptel-quiz` (`%USERPROFILE%\.nptel-quiz` on
+Windows), install Playwright's Chromium, set up OCR, and add the `nptel-quiz`
+command to your PATH. To see the current state at any time:
 
 ```bash
-# 1) Sign in to NPTEL once (Google SSO). The session is saved.
-nptel-quiz login
-
-# 2) Fully automatic with Gemini
-export GEMINI_API_KEY=your-key
-nptel-quiz run --url "https://onlinecourses.nptel.ac.in/e-learning/course/noc26_cs153?unitId=98&assessmentId=763"
+nptel-quiz doctor        # report what's installed
+nptel-quiz doctor --fix  # install whatever is missing
 ```
 
-## Commands
+## First run
 
-| Command | Description |
-|---|---|
-| `nptel-quiz login` | Open a browser and save the NPTEL login session. |
-| `nptel-quiz ocr --url <u>` | Print OCR'd questions (`[Q1] ...`). Use `--json <f>` to save. |
-| `nptel-quiz submit --url <u> --answers "a,b,c"` | Select + submit answers. |
-| `nptel-quiz run --url <u> [--provider gemini]` | Full loop: OCR → answer → submit. |
-| `nptel-quiz list --course <c>` | List weeks + quizzes with `done`/`TODO` status and URLs. |
-| `nptel-quiz doctor [--fix]` | Check Node/Playwright/Chromium/OCR/login; `--fix` installs what's missing. |
-| `nptel-quiz install-skill [--global]` | Install the Antigravity/agent skill. |
+Sign in once. This opens a browser where you log in to NPTEL through Google as
+usual. The session is stored in a local browser profile and reused from then on.
 
-Common flags: `--dry-run` (select but don't submit), `--headless`, `--channel chrome`, `--model <gemini-model>`.
+```bash
+nptel-quiz login
+```
 
-Answer format: one letter per question, comma-separated. For multi-select (MSQ)
-join a question's choices with `+`, e.g. `--answers "a+c,b,d"`.
+## Usage
 
-**Quizzes use `assessmentId`** — programming assignments use `progassignmentId`.
-A wrong param silently loads the last-viewed quiz, so always check the printed title.
-
-## One-prompt setup (Antigravity / any agent)
-
-Paste this repo's URL into your agent and say **"setup"**. The agent follows
-[`AGENTS.md`](AGENTS.md) / the skill and will:
-
-1. run the installer,
-2. `nptel-quiz doctor --fix` to guarantee Playwright + Chromium + OCR,
-3. `nptel-quiz login` (you complete Google SSO once),
-4. `nptel-quiz list --course <id>` and **ask which week to proceed with**,
-5. solve the chosen week: `ocr` → (agent answers) → `submit`.
+List the weeks in a course and see which quizzes you've already submitted:
 
 ```bash
 nptel-quiz list --course noc26_cs153
-# Course: noc26_cs153
-# Week 7 :  (unitId=66)
-#   [TODO] quiz  Quiz: Week 7 : Assignment 7  (assessmentId=753)
-#         https://.../noc26_cs153?unitId=66&assessmentId=753
-# Week 8 :  (unitId=74)  ...
 ```
 
-## Agent integration (Antigravity, opencode, …)
-
-If an agent is driving, skip the API key entirely — the agent's own model answers:
+Each entry shows the quiz title, its status (`TODO` or `done`), and the URL to
+use. OCR a quiz to read the questions:
 
 ```bash
-nptel-quiz ocr --url "<quizUrl>" --json /tmp/quiz.json   # agent reads questions
-# ... agent decides answers ...
-nptel-quiz submit --url "<quizUrl>" --answers "b,a,b,a,c,d,b,a,b,a"
+nptel-quiz ocr --url "<quiz url>"
 ```
 
-### Google Antigravity
-
-Antigravity already ships Gemini Flash, so use it as the answer engine — no
-`GEMINI_API_KEY` needed. Install the skill (it follows the Agent Skills standard):
+This prints one block per question with its options. Decide the answers and
+submit:
 
 ```bash
-nptel-quiz install-skill            # workspace: ./.agents/skills/nptel-quiz/
-nptel-quiz install-skill --global   # all workspaces: ~/.gemini/config/skills/nptel-quiz/
+nptel-quiz submit --url "<quiz url>" --answers "b,a,b,a,c,d,b,a,b,a"
 ```
 
-Then in Antigravity, open the **Customizations** panel (or run `/skills`) to
-confirm `nptel-quiz` is listed, and paste a quiz URL + "solve this quiz". The
-agent will OCR via the CLI, answer with its Flash model, and submit.
+For a fully automatic run that answers with Gemini:
 
-> Skill paths: workspace `./.agents/skills/<name>/SKILL.md`; global
-> `~/.gemini/config/skills/<name>/SKILL.md` (legacy `~/.gemini/antigravity/skills/`
-> also works). Rules live in `./.agents/rules/` or `~/.gemini/GEMINI.md`.
+```bash
+export GEMINI_API_KEY=...
+nptel-quiz run --url "<quiz url>"
+```
 
-### opencode / other agents
+Answers are one letter per question, comma separated. For multi-select questions
+join the choices with `+`, for example `"a+c,b,d"`. Add `--dry-run` to select the
+options without submitting.
 
-Same flow. A ready-made skill lives in
-[`skill/nptel-quiz/SKILL.md`](skill/nptel-quiz/SKILL.md); copy it into your
-agent's skills directory (for opencode: `~/.config/opencode/skills/nptel-quiz/`).
+## Using it with an AI agent
 
-## Library / SDK
+When an agent such as Antigravity or opencode is driving, you don't need an API
+key: the agent reads the OCR output and answers with its own model.
+
+```bash
+nptel-quiz ocr --url "<quiz url>" --json /tmp/quiz.json   # agent reads this
+nptel-quiz submit --url "<quiz url>" --answers "..."      # agent supplies this
+```
+
+Install the skill so the agent can run the whole flow itself:
+
+```bash
+nptel-quiz install-skill --global
+```
+
+Then paste a quiz URL and ask the agent to solve it. The skill is written to the
+standard locations: `~/.gemini/config/skills/nptel-quiz/` for Antigravity, or
+`./.agents/skills/nptel-quiz/` for a single project.
+
+## OCR backends
+
+There are two on-device engines, chosen by operating system. Only one ever runs
+on a given machine.
+
+| OS | Engine | Build |
+|---|---|---|
+| macOS | Apple Vision | compiled with `swiftc` during install |
+| Windows | Windows.Media.Ocr | none; ships with the OS |
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `login` | Save an NPTEL browser session. |
+| `list` | List weeks and quizzes (`--all` adds programming assignments). |
+| `ocr` | OCR a quiz to text. |
+| `submit` | Select and submit answers. |
+| `run` | OCR, answer with Gemini, submit. |
+| `doctor` | Check Node, Playwright, Chromium, OCR, and login. |
+| `install-skill` | Install the agent skill. |
+
+## Configuration
+
+| Variable | Purpose |
+|---|---|
+| `GEMINI_API_KEY` | Key used by `run`. |
+| `NPTEL_QUIZ_GEMINI_MODEL` | Gemini model, default `gemini-3.8-flash`. |
+| `NPTEL_QUIZ_COURSE_URL` | Default course URL used by `login`. |
+| `NPTEL_QUIZ_PROFILE` | Browser profile directory. |
+| `NPTEL_QUIZ_HOME` | Install directory. |
+
+## Library
+
+The same code is usable as a module:
 
 ```js
 const nq = require('nptel-quiz');
 
-const ctx = await nq.launch({ headless: true });
+const ctx = await nq.launch();
 try {
-  const { title, questions } = await nq.ocrQuiz(ctx, url);   // OCR only
-  const res = await nq.runQuiz(ctx, { url, provider: 'gemini' });
-  console.log(res.submitted);
+  const { title, questions } = await nq.ocrQuiz(ctx, url);
+  const result = await nq.runQuiz(ctx, { url, provider: 'gemini' });
+  console.log(result.submitted);
 } finally {
   await ctx.close();
 }
 ```
 
-Exports: `launch`, `isLoggedIn`, `profileDir`, `extractQuiz`, `selectAnswers`,
-`ocrImages`, `ocrQuiz`, `runQuiz`, `submitAnswers`, `getAnswerProvider`.
+Exports: `launch`, `isLoggedIn`, `checkPlaywright`, `extractQuiz`, `selectAnswers`,
+`ocrImages`, `ocrReady`, `ocrQuiz`, `runQuiz`, `submitAnswers`, `parseCourseId`,
+`fetchOutline`, `summarizeWeeks`.
 
-## Playwright / browser setup
+## Known limits
 
-The tool drives a real browser, so it needs Playwright and its Chromium build.
-If either is missing, `nptel-quiz` fails with a clear message telling you how to
-fix it, and `doctor` reports exactly what's wrong:
-
-```bash
-nptel-quiz doctor          # read-only check
-nptel-quiz doctor --fix    # installs the Playwright package, Chromium, and the OCR binary
-```
-
-What `doctor` checks: Node.js >= 18, the `playwright` package, the Chromium
-binary, the native OCR binary, and the saved login profile. The one-liner
-installer runs `doctor` automatically at the end.
-
-## Cost (measured)
-
-Per quiz of 10 questions: OCR = **$0** (~29 tokens/question of text), and a single
-batched answer call is **~365 tokens** total — a few hundredths of a cent on any
-cheap text model, versus ~2,000+ vision tokens if you sent the images directly.
-
-## Configuration
-
-| Env var | Purpose |
-|---|---|
-| `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Key for `--provider gemini`. |
-| `NPTEL_QUIZ_GEMINI_MODEL` | Gemini model (default `gemini-3.8-flash`, the latest Flash). |
-| `NPTEL_QUIZ_PROFILE` | Browser profile dir (default `~/.nptel-quiz/profile`). |
-| `NPTEL_QUIZ_OCR` | Path to the OCR binary. |
-| `NPTEL_QUIZ_COURSE_URL` | Default course URL used by `login`. |
-
-## How it works
-
-1. **Extract** — pull base64 question PNGs and the radio/checkbox groups from the page.
-2. **OCR** — decode images to a temp dir, run the Swift/Apple Vision binary (JSON out).
-3. **Answer** — Gemini (batched) or the calling agent.
-4. **Submit** — map letters to input indices (using per-question option counts), `check()` them, click **Submit Answers**.
+- Works only with quizzes whose questions are images, and the URL has to use
+  `assessmentId` (programming assignments use `progassignmentId`).
+- Answers to code-reading questions are only as good as the model answering them.
+- OCR occasionally misreads punctuation, such as reading `()` as `O`. This does
+  not change which option is correct.
+- Intended for your own enrolled courses. Respect NPTEL's academic-integrity rules.
 
 ## License
 
-MIT. For your own enrolled courses — respect NPTEL's academic-integrity policy.
+MIT

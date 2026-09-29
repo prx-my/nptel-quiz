@@ -1,7 +1,7 @@
 {
   "name": "nptel-quiz",
   "version": "1.0.0",
-  "description": "OCR + auto-answer pipeline for NPTEL image-based quizzes (macOS). Uses on-device Apple Vision OCR and a pluggable answer engine.",
+  "description": "Solve NPTEL image-based quizzes on macOS and Windows with on-device OCR (Apple Vision / Windows.Media.Ocr) and an AI agent or Gemini for answers.",
   "type": "commonjs",
   "main": "src/index.js",
   "bin": {
