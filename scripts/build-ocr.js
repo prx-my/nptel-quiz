@@ -17,8 +17,18 @@ function log(msg) {
   process.stdout.write(`[nptel-quiz] ${msg}\n`);
 }
 
+if (process.platform === 'win32') {
+  const ps1 = path.join(root, 'native', 'ocr.ps1');
+  if (!fs.existsSync(ps1)) {
+    log(`Missing Windows OCR script: ${ps1}`);
+    process.exit(1);
+  }
+  log('Windows: using the built-in Windows.Media.Ocr engine (native/ocr.ps1). No build required.');
+  process.exit(0);
+}
+
 if (process.platform !== 'darwin') {
-  log('Not macOS — skipping native OCR build (the OCR step requires macOS Vision).');
+  log(`${process.platform}: no on-device OCR backend available; the OCR step is disabled.`);
   process.exit(0);
 }
 

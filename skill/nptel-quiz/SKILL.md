@@ -17,13 +17,19 @@ Repo: https://github.com/prx-my/nptel-quiz
 
 Run these via your shell/`run_command` tool, in order:
 
-1. Install the CLI:
+1. Install the CLI for the OS:
    ```
+   # macOS
    curl -fsSL https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.sh | bash
    ```
-   The installer installs dependencies, Playwright + Chromium, compiles the
-   on-device OCR binary, and runs a health check. It needs Xcode Command Line
-   Tools (`xcode-select --install`) for the OCR build.
+   ```
+   # Windows (PowerShell)
+   powershell -ExecutionPolicy Bypass -c "iwr -useb https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.ps1 | iex"
+   ```
+   The installer sets up dependencies, Playwright + Chromium, OCR, and a health
+   check. OCR is per-OS and never collides: macOS uses Apple **Vision** (needs
+   Xcode Command Line Tools via `xcode-select --install`); Windows uses the
+   built-in **Windows.Media.Ocr** (no build).
 
 2. Verify (and auto-fix if anything is missing):
    ```

@@ -1,7 +1,9 @@
 'use strict';
 
-// Free, on-device OCR via the compiled Swift binary (Apple Vision).
-// No network, no tokens, ~30ms per question image.
+// Platform-dispatched, on-device OCR. Exactly one backend per OS:
+//   darwin  -> Apple Vision (native/ocr.swift compiled to bin/ocr)
+//   win32   -> Windows.Media.Ocr (native/ocr.ps1, built into Windows)
+// No backend ever runs on the wrong OS, so they cannot collide.
 
 const { execFile } = require('child_process');
 const { promisify } = require('util');
@@ -10,10 +12,39 @@ const os = require('os');
 const path = require('path');
 
 const execFileAsync = promisify(execFile);
+const ROOT = path.join(__dirname, '..');
 
-function ocrBinaryPath() {
-  if (process.env.NPTEL_QUIZ_OCR) return process.env.NPTEL_QUIZ_OCR;
-  return path.join(__dirname, '..', 'bin', 'ocr');
+/**
+ * @returns {{name:string, kind:'binary'|'powershell', path:string}|null}
+ */
+function ocrBackend() {
+  if (process.platform === 'darwin') {
+    return {
+      name: 'vision',
+      kind: 'binary',
+      path: process.env.NPTEL_QUIZ_OCR || path.join(ROOT, 'bin', 'ocr')
+    };
+  }
+  if (process.platform === 'win32') {
+    return {
+      name: 'winrt',
+      kind: 'powershell',
+      path: process.env.NPTEL_QUIZ_OCR || path.join(ROOT, 'native', 'ocr.ps1')
+    };
+  }
+  return null;
+}
+
+/** Readiness of the OCR backend for the current OS. */
+function ocrReady() {
+  const backend = ocrBackend();
+  if (!backend) {
+    return { ok: false, backend: null, reason: `no on-device OCR backend for ${process.platform}` };
+  }
+  if (!fs.existsSync(backend.path)) {
+    return { ok: false, backend, reason: `missing ${backend.path}` };
+  }
+  return { ok: true, backend };
 }
 
 function decodeDataUrl(dataUrl) {
@@ -24,6 +55,19 @@ function decodeDataUrl(dataUrl) {
   return Buffer.from(payload, isBase64 ? 'base64' : 'utf8');
 }
 
+async function runBackend(backend, paths) {
+  let stdout;
+  if (backend.kind === 'binary') {
+    ({ stdout } = await execFileAsync(backend.path, paths, { maxBuffer: 32 * 1024 * 1024 }));
+  } else {
+    const ps = process.env.NPTEL_QUIZ_POWERSHELL || 'powershell';
+    const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', backend.path, ...paths];
+    ({ stdout } = await execFileAsync(ps, args, { maxBuffer: 32 * 1024 * 1024, windowsHide: true }));
+  }
+  const parsed = JSON.parse(stdout.toString('utf8'));
+  return Array.isArray(parsed) ? parsed : [parsed];
+}
+
 /**
  * OCR a list of image data URLs (or raw base64 strings).
  * @param {string[]} images
@@ -32,10 +76,13 @@ function decodeDataUrl(dataUrl) {
 async function ocrImages(images) {
   if (!images || images.length === 0) return [];
 
-  const bin = ocrBinaryPath();
-  if (!fs.existsSync(bin)) {
+  const ready = ocrReady();
+  if (!ready.ok) {
     throw new Error(
-      `OCR binary not found at ${bin}. Run "npm run build:ocr" (needs Xcode CLT).`
+      `OCR unavailable: ${ready.reason}.\n` +
+        (process.platform === 'darwin'
+          ? 'Build it with: npm run build:ocr  (needs: xcode-select --install)'
+          : 'Windows should include Windows.Media.Ocr; ensure a language pack is installed.')
     );
   }
 
@@ -47,20 +94,17 @@ async function ocrImages(images) {
       return p;
     });
 
-    const { stdout } = await execFileAsync(bin, paths, {
-      maxBuffer: 32 * 1024 * 1024
-    });
+    const parsed = await runBackend(ready.backend, paths);
 
-    const parsed = JSON.parse(stdout.toString('utf8'));
     return images.map((_, i) => {
       const entry = parsed[i];
       if (!entry) return '';
       if (entry.error) throw new Error(`OCR failed for image ${i + 1}: ${entry.error}`);
-      return entry.text;
+      return entry.text || '';
     });
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
 
-module.exports = { ocrImages, ocrBinaryPath };
+module.exports = { ocrImages, ocrBackend, ocrReady };

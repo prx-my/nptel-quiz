@@ -14,6 +14,7 @@
     "scripts",
     "skill",
     "install.sh",
+    "install.ps1",
     "README.md",
     "AGENTS.md"
   ],
@@ -29,7 +30,8 @@
     "node": ">=18"
   },
   "os": [
-    "darwin"
+    "darwin",
+    "win32"
   ],
   "keywords": [
     "nptel",

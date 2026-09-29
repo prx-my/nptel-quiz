@@ -26,9 +26,10 @@ module.exports = {
   extractQuiz: quiz.extractQuiz,
   selectAnswers: quiz.selectAnswers,
 
-  // OCR
+  // OCR (platform-dispatched: darwin=Vision, win32=Windows.Media.Ocr)
   ocrImages: ocr.ocrImages,
-  ocrBinaryPath: ocr.ocrBinaryPath,
+  ocrBackend: ocr.ocrBackend,
+  ocrReady: ocr.ocrReady,
 
   // high-level flows
   ocrQuiz: pipeline.ocrQuiz,

@@ -215,9 +215,23 @@ function cmdDoctor(opts) {
   const major = parseInt(process.versions.node.split('.')[0], 10);
   add('Node.js >= 18', major >= 18, process.version, 'brew install node');
 
-  const ocrPath = nq.ocrBinaryPath();
-  const ocrOk = fs.existsSync(ocrPath);
-  add('OCR binary (Apple Vision)', ocrOk, ocrPath, 'npm run build:ocr   (needs: xcode-select --install)');
+  const ocrInfo = nq.ocrReady();
+  const ocrLabel =
+    process.platform === 'darwin'
+      ? 'Apple Vision'
+      : process.platform === 'win32'
+        ? 'Windows.Media.Ocr'
+        : ocrInfo.backend
+          ? ocrInfo.backend.name
+          : 'none';
+  add(
+    `OCR backend (${ocrLabel})`,
+    ocrInfo.ok,
+    ocrInfo.backend ? ocrInfo.backend.path : `unsupported on ${process.platform}`,
+    process.platform === 'win32'
+      ? 'built into Windows — add a language with OCR in Settings if missing'
+      : 'npm run build:ocr   (needs: xcode-select --install)'
+  );
 
   let pw;
   try {
@@ -259,7 +273,7 @@ function cmdDoctor(opts) {
   process.stdout.write('Fixing...\n');
   if (!pw.playwright) sh('npm', ['install']);
   if (!pw.chromium) sh('npx', ['--yes', 'playwright', 'install', 'chromium']);
-  if (!ocrOk) sh('npm', ['run', 'build:ocr']);
+  if (!ocrInfo.ok && process.platform === 'darwin') sh('npm', ['run', 'build:ocr']);
   process.stdout.write('\nDone. Re-run "nptel-quiz doctor" to verify.\n');
   if (!fs.existsSync(profile)) process.stdout.write('Then run: nptel-quiz login\n');
 }

@@ -12,9 +12,22 @@ with a pluggable engine:
 
 ## Install (one line)
 
+**macOS**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.sh | bash
 ```
+
+**Windows** (PowerShell)
+```powershell
+powershell -ExecutionPolicy Bypass -c "iwr -useb https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.ps1 | iex"
+```
+
+OCR is **on-device and per-OS — the two engines never collide**:
+
+| OS | OCR engine | Build needed |
+|---|---|---|
+| macOS | Apple **Vision** (`native/ocr.swift` → `bin/ocr`) | yes (`swiftc`, via Xcode CLT) |
+| Windows | **Windows.Media.Ocr** (`native/ocr.ps1`) | no — built into Windows 10/11 |
 
 The installer:
 
@@ -24,7 +37,9 @@ The installer:
 4. compiles the native OCR binary with `swiftc`,
 5. links the `nptel-quiz` command onto your `PATH`.
 
-> Requires the **Xcode Command Line Tools** for `swiftc` (`xcode-select --install`).
+> macOS requires the **Xcode Command Line Tools** for `swiftc` (`xcode-select --install`).
+> Windows needs no OCR build — it uses the built-in `Windows.Media.Ocr` engine
+> (ensure a language with OCR support is installed, e.g. English).
 
 ## Quick start
 

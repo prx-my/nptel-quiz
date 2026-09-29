@@ -9,15 +9,29 @@ quizzes**, follow the flow below using your shell/`run_command` tool.
 
 ## 1. Setup
 
+Pick the installer for the OS:
+
 ```bash
+# macOS
 curl -fsSL https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.sh | bash
+```
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -c "iwr -useb https://raw.githubusercontent.com/prx-my/nptel-quiz/main/install.ps1 | iex"
+```
+
+Then, on either OS:
+```bash
 nptel-quiz doctor --fix      # verify Node, Playwright, Chromium, OCR; installs anything missing
 nptel-quiz login             # opens a browser; the user completes Google SSO once
 ```
 
-- The OCR build needs Xcode Command Line Tools (`xcode-select --install`).
-- If `nptel-quiz` is not found, the install bin dir (`~/.local/bin` or
-  `/usr/local/bin`) needs to be on PATH.
+- OCR is per-OS and never collides: macOS uses Apple **Vision**; Windows uses the
+  built-in **Windows.Media.Ocr**. The macOS Vision build needs Xcode Command Line
+  Tools (`xcode-select --install`); Windows needs no OCR build.
+- If `nptel-quiz` is not found, the install bin dir needs to be on PATH
+  (`~/.local/bin` or `/usr/local/bin` on macOS; `%USERPROFILE%\.nptel-quiz\bin` on
+  Windows — re-open the terminal after install).
 - Optional: `nptel-quiz install-skill --global` registers the skill for later.
 
 ## 2. Ask which week
