@@ -14,7 +14,8 @@
     "scripts",
     "skill",
     "install.sh",
-    "README.md"
+    "README.md",
+    "AGENTS.md"
   ],
   "scripts": {
     "postinstall": "node scripts/build-ocr.js",

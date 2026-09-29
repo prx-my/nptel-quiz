@@ -45,6 +45,7 @@ nptel-quiz run --url "https://onlinecourses.nptel.ac.in/e-learning/course/noc26_
 | `nptel-quiz ocr --url <u>` | Print OCR'd questions (`[Q1] ...`). Use `--json <f>` to save. |
 | `nptel-quiz submit --url <u> --answers "a,b,c"` | Select + submit answers. |
 | `nptel-quiz run --url <u> [--provider gemini]` | Full loop: OCR → answer → submit. |
+| `nptel-quiz list --course <c>` | List weeks + quizzes with `done`/`TODO` status and URLs. |
 | `nptel-quiz doctor [--fix]` | Check Node/Playwright/Chromium/OCR/login; `--fix` installs what's missing. |
 | `nptel-quiz install-skill [--global]` | Install the Antigravity/agent skill. |
 
@@ -55,6 +56,26 @@ join a question's choices with `+`, e.g. `--answers "a+c,b,d"`.
 
 **Quizzes use `assessmentId`** — programming assignments use `progassignmentId`.
 A wrong param silently loads the last-viewed quiz, so always check the printed title.
+
+## One-prompt setup (Antigravity / any agent)
+
+Paste this repo's URL into your agent and say **"setup"**. The agent follows
+[`AGENTS.md`](AGENTS.md) / the skill and will:
+
+1. run the installer,
+2. `nptel-quiz doctor --fix` to guarantee Playwright + Chromium + OCR,
+3. `nptel-quiz login` (you complete Google SSO once),
+4. `nptel-quiz list --course <id>` and **ask which week to proceed with**,
+5. solve the chosen week: `ocr` → (agent answers) → `submit`.
+
+```bash
+nptel-quiz list --course noc26_cs153
+# Course: noc26_cs153
+# Week 7 :  (unitId=66)
+#   [TODO] quiz  Quiz: Week 7 : Assignment 7  (assessmentId=753)
+#         https://.../noc26_cs153?unitId=66&assessmentId=753
+# Week 8 :  (unitId=74)  ...
+```
 
 ## Agent integration (Antigravity, opencode, …)
 

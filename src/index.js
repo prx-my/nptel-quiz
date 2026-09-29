@@ -13,6 +13,7 @@ const quiz = require('./quiz');
 const ocr = require('./ocr');
 const providers = require('./providers');
 const pipeline = require('./pipeline');
+const course = require('./course');
 
 module.exports = {
   // browser / session
@@ -35,5 +36,10 @@ module.exports = {
   submitAnswers: pipeline.submitAnswers,
 
   // providers
-  getAnswerProvider: providers.getAnswerProvider
+  getAnswerProvider: providers.getAnswerProvider,
+
+  // course outline
+  parseCourseId: course.parseCourseId,
+  fetchOutline: course.fetchOutline,
+  summarizeWeeks: course.summarizeWeeks
 };

@@ -23,6 +23,9 @@ Usage:
                      Install the agent skill (Antigravity / opencode / any agent).
   nptel-quiz doctor  [--fix]
                      Check Node, Playwright, Chromium, OCR and login. --fix installs.
+  nptel-quiz list    --course <courseId|url> [--all] [--json]
+                     List weeks and their quizzes (id, status, URL). --all adds
+                     programming assignments.
 
 Options:
   --url <quizUrl>     Quiz page URL, e.g.
@@ -261,6 +264,43 @@ function cmdDoctor(opts) {
   if (!fs.existsSync(profile)) process.stdout.write('Then run: nptel-quiz login\n');
 }
 
+async function cmdList(opts) {
+  const input = opts.course || opts.url || process.env.NPTEL_QUIZ_COURSE_URL;
+  if (!input) throw new Error('--course <courseId|url> is required');
+  const courseId = nq.parseCourseId(input);
+
+  return withContext(opts, async (context) => {
+    const outline = await nq.fetchOutline(context, courseId);
+    const weeks = nq.summarizeWeeks(outline, courseId, {
+      includeAssignments: !!opts.all
+    });
+
+    if (opts.json) {
+      const payload = JSON.stringify({ courseId, weeks }, null, 2);
+      if (opts.json === true) process.stdout.write(payload + '\n');
+      else {
+        fs.writeFileSync(opts.json, payload);
+        process.stdout.write(`Wrote ${opts.json}\n`);
+      }
+      return;
+    }
+
+    process.stdout.write(`\nCourse: ${courseId}\n`);
+    for (const w of weeks) {
+      process.stdout.write(`\n${w.week}  (unitId=${w.weekId})\n`);
+      for (const q of w.quizzes) {
+        const mark = q.submitted ? 'done' : 'TODO';
+        process.stdout.write(`  [${mark}] quiz  ${q.title}  (assessmentId=${q.contentId})\n        ${q.url}\n`);
+      }
+      for (const a of w.assignments) {
+        const mark = a.submitted ? 'done' : 'TODO';
+        process.stdout.write(`  [${mark}] prog  ${a.title}  (progassignmentId=${a.contentId})\n`);
+      }
+    }
+    process.stdout.write('\n');
+  });
+}
+
 function cmdInstallSkill(opts) {
   const src = path.join(__dirname, '..', 'skill', 'nptel-quiz', 'SKILL.md');
   if (!fs.existsSync(src)) throw new Error(`Skill source missing: ${src}`);
@@ -313,6 +353,8 @@ async function main() {
       return cmdInstallSkill(opts);
     case 'doctor':
       return cmdDoctor(opts);
+    case 'list':
+      return cmdList(opts);
     default:
       process.stderr.write(`Unknown command "${cmd}"\n${HELP}`);
       process.exit(2);
