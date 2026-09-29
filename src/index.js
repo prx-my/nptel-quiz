@@ -19,6 +19,7 @@ module.exports = {
   launch: browser.launch,
   isLoggedIn: browser.isLoggedIn,
   profileDir: browser.profileDir,
+  checkPlaywright: browser.checkPlaywright,
 
   // low-level page ops
   extractQuiz: quiz.extractQuiz,

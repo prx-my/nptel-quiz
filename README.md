@@ -45,6 +45,8 @@ nptel-quiz run --url "https://onlinecourses.nptel.ac.in/e-learning/course/noc26_
 | `nptel-quiz ocr --url <u>` | Print OCR'd questions (`[Q1] ...`). Use `--json <f>` to save. |
 | `nptel-quiz submit --url <u> --answers "a,b,c"` | Select + submit answers. |
 | `nptel-quiz run --url <u> [--provider gemini]` | Full loop: OCR → answer → submit. |
+| `nptel-quiz doctor [--fix]` | Check Node/Playwright/Chromium/OCR/login; `--fix` installs what's missing. |
+| `nptel-quiz install-skill [--global]` | Install the Antigravity/agent skill. |
 
 Common flags: `--dry-run` (select but don't submit), `--headless`, `--channel chrome`, `--model <gemini-model>`.
 
@@ -105,6 +107,21 @@ try {
 
 Exports: `launch`, `isLoggedIn`, `profileDir`, `extractQuiz`, `selectAnswers`,
 `ocrImages`, `ocrQuiz`, `runQuiz`, `submitAnswers`, `getAnswerProvider`.
+
+## Playwright / browser setup
+
+The tool drives a real browser, so it needs Playwright and its Chromium build.
+If either is missing, `nptel-quiz` fails with a clear message telling you how to
+fix it, and `doctor` reports exactly what's wrong:
+
+```bash
+nptel-quiz doctor          # read-only check
+nptel-quiz doctor --fix    # installs the Playwright package, Chromium, and the OCR binary
+```
+
+What `doctor` checks: Node.js >= 18, the `playwright` package, the Chromium
+binary, the native OCR binary, and the saved login profile. The one-liner
+installer runs `doctor` automatically at the end.
 
 ## Cost (measured)
 

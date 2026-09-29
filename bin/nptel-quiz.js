@@ -4,6 +4,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const nq = require('../src');
 const { DEFAULT_COURSE_URL } = require('../src/browser');
 
@@ -20,6 +21,8 @@ Usage:
                      [--answers "a,b,c"] [--dry-run] [--headless]
   nptel-quiz install-skill [--global] [--dir <path>]
                      Install the agent skill (Antigravity / opencode / any agent).
+  nptel-quiz doctor  [--fix]
+                     Check Node, Playwright, Chromium, OCR and login. --fix installs.
 
 Options:
   --url <quizUrl>     Quiz page URL, e.g.
@@ -197,6 +200,67 @@ async function cmdRun(opts) {
   });
 }
 
+function sh(cmd, args) {
+  return spawnSync(cmd, args, { stdio: 'inherit' });
+}
+
+function cmdDoctor(opts) {
+  const fix = !!opts.fix;
+  const checks = [];
+  const add = (name, ok, detail, remedy) => checks.push({ name, ok, detail, remedy });
+
+  const major = parseInt(process.versions.node.split('.')[0], 10);
+  add('Node.js >= 18', major >= 18, process.version, 'brew install node');
+
+  const ocrPath = nq.ocrBinaryPath();
+  const ocrOk = fs.existsSync(ocrPath);
+  add('OCR binary (Apple Vision)', ocrOk, ocrPath, 'npm run build:ocr   (needs: xcode-select --install)');
+
+  let pw;
+  try {
+    pw = nq.checkPlaywright();
+  } catch (e) {
+    pw = { playwright: false, chromium: false, reason: e.message };
+  }
+  add('Playwright package', !!pw.playwright, pw.playwright ? 'installed' : 'missing', 'npm install');
+  add(
+    'Chromium browser',
+    !!pw.chromium,
+    pw.executablePath && pw.chromium ? pw.executablePath : pw.reason || 'missing',
+    'npx playwright install chromium'
+  );
+
+  const profile = nq.profileDir();
+  add('Login profile', fs.existsSync(profile), profile, 'nptel-quiz login');
+
+  process.stdout.write('\nnptel-quiz doctor\n-----------------\n');
+  for (const c of checks) {
+    process.stdout.write(`${c.ok ? '  \u2713' : '  \u2717'} ${c.name}${c.detail ? '  (' + c.detail + ')' : ''}\n`);
+    if (!c.ok && c.remedy) process.stdout.write(`      fix: ${c.remedy}\n`);
+  }
+
+  const missing = checks.filter((c) => !c.ok);
+  process.stdout.write('\n');
+
+  if (!missing.length) {
+    process.stdout.write('All good. Next: nptel-quiz login && nptel-quiz run --url "<quizUrl>"\n');
+    return;
+  }
+
+  if (!fix) {
+    process.stdout.write('Some checks failed. Re-run with --fix to install automatically:\n  nptel-quiz doctor --fix\n');
+    process.exitCode = 1;
+    return;
+  }
+
+  process.stdout.write('Fixing...\n');
+  if (!pw.playwright) sh('npm', ['install']);
+  if (!pw.chromium) sh('npx', ['--yes', 'playwright', 'install', 'chromium']);
+  if (!ocrOk) sh('npm', ['run', 'build:ocr']);
+  process.stdout.write('\nDone. Re-run "nptel-quiz doctor" to verify.\n');
+  if (!fs.existsSync(profile)) process.stdout.write('Then run: nptel-quiz login\n');
+}
+
 function cmdInstallSkill(opts) {
   const src = path.join(__dirname, '..', 'skill', 'nptel-quiz', 'SKILL.md');
   if (!fs.existsSync(src)) throw new Error(`Skill source missing: ${src}`);
@@ -247,6 +311,8 @@ async function main() {
       return cmdRun(opts);
     case 'install-skill':
       return cmdInstallSkill(opts);
+    case 'doctor':
+      return cmdDoctor(opts);
     default:
       process.stderr.write(`Unknown command "${cmd}"\n${HELP}`);
       process.exit(2);

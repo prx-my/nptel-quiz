@@ -103,6 +103,10 @@ case ":$PATH:" in
   *) c_warn "Add $BIN_DIR to PATH:  echo 'export PATH=\"$BIN_DIR:\$PATH\"' >> ~/.zshrc" ;;
 esac
 
+# --- 10. Verify --------------------------------------------------------------
+c_info "Verifying installation..."
+node "$APP_DIR/bin/nptel-quiz.js" doctor || true
+
 cat <<EOF
 
   Done. Next steps:
