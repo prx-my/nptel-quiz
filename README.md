@@ -95,7 +95,7 @@ cheap text model, versus ~2,000+ vision tokens if you sent the images directly.
 | Env var | Purpose |
 |---|---|
 | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Key for `--provider gemini`. |
-| `NPTEL_QUIZ_GEMINI_MODEL` | Gemini model (default `gemini-2.5-flash`). |
+| `NPTEL_QUIZ_GEMINI_MODEL` | Gemini model (default `gemini-3.8-flash`, the latest Flash). |
 | `NPTEL_QUIZ_PROFILE` | Browser profile dir (default `~/.nptel-quiz/profile`). |
 | `NPTEL_QUIZ_OCR` | Path to the OCR binary. |
 | `NPTEL_QUIZ_COURSE_URL` | Default course URL used by `login`. |

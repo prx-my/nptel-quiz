@@ -3,7 +3,7 @@
 // Answer engine backed by the Gemini API.
 // One batched request per quiz (all questions in a single call) keeps cost tiny.
 
-const DEFAULT_MODEL = process.env.NPTEL_QUIZ_GEMINI_MODEL || 'gemini-2.5-flash';
+const DEFAULT_MODEL = process.env.NPTEL_QUIZ_GEMINI_MODEL || 'gemini-3.8-flash';
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 function buildPrompt(questions, quizType) {

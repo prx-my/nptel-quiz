@@ -34,7 +34,7 @@ Environment:
   GEMINI_API_KEY      Required for --provider gemini.
   NPTEL_QUIZ_PROFILE  Override the browser profile dir (~/.nptel-quiz/profile).
   NPTEL_QUIZ_OCR      Override the OCR binary path.
-  NPTEL_QUIZ_GEMINI_MODEL  Override the Gemini model (default gemini-2.5-flash).
+  NPTEL_QUIZ_GEMINI_MODEL  Override the Gemini model (default gemini-3.8-flash).
 
 Examples:
   nptel-quiz login
